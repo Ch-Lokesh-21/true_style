@@ -48,21 +48,19 @@ class Settings(BaseSettings):
     
     CLEANUP_INTERVAL_MINUTES: int = 30  # Run cleanup every N minutes
 
-    USER_MAX_REQUESTS : int           # requests per user
-    USER_WINDOW_SECONDS : int            # per N seconds
+    USER_MAX_REQUESTS : int           
+    USER_WINDOW_SECONDS : int            
 
-    IP_MAX_REQUESTS : int              # how many requests allowed
-    IP_WINDOW_SECONDS : int            # per this many seconds
-    IP_BLOCK_SECONDS : int        # temporary block duration on abuse (e.g., 15 min)
+    IP_MAX_REQUESTS : int              
+    IP_WINDOW_SECONDS : int            
+    IP_BLOCK_SECONDS : int        
 
-    SUSPICIOUS_STRIKE_LIMIT : int         # how many windows they can hit the limit
-    SUSPICIOUS_BLOCK_SECONDS : int  # block duration (e.g., 15 min)
+    SUSPICIOUS_STRIKE_LIMIT : int
+    SUSPICIOUS_BLOCK_SECONDS : int  
     
     RAZORPAY_KEY_ID: str
     RAZORPAY_KEY_SECRET: str
     
-    # OpenAI Configuration
-    OPENAI_API_KEY: str
     
     class Config:
         env_file = ".env"

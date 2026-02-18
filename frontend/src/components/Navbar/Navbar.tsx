@@ -16,7 +16,6 @@ import {
   ShoppingCartOutlined,
   PersonOutline,
   SearchOutlined,
-  AutoAwesome,
 } from "@mui/icons-material";
 import { useAppSelector } from "../../app/store/hooks";
 import { useLogout } from "../../features/auth/hooks/useAuth";
@@ -123,13 +122,6 @@ export const Navbar = () => {
         >
           {isAuthenticated ? (
             <>
-              <IconButton
-                onClick={() => navigate(ROUTES.USER.AI_SEARCH)}
-                sx={{ display: { xs: "none", sm: "inline-flex" } }}
-                title="AI Search"
-              >
-                <AutoAwesome />
-              </IconButton>
               <IconButton
                 onClick={() => navigate(ROUTES.USER.WISHLIST)}
                 sx={{ display: { xs: "none", sm: "inline-flex" } }}

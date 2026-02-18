@@ -1,0 +1,267 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Typography,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
+import { Edit, Delete, Visibility } from '@mui/icons-material';
+import {
+  useReturns,
+  useUpdateReturnStatus,
+  useDeleteReturn,
+  useReturnStatuses,
+} from '../hooks/useReturns';
+import { ReturnFormModal } from './ReturnFormModal';
+import type { Return, ReturnUpdate } from '../types';
+
+export const ReturnList: React.FC = () => {
+  const [statusFilter, setStatusFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState<Return | null>(null);
+
+  const { data: statuses } = useReturnStatuses();
+  const { data: returns, isLoading } = useReturns({
+    return_status_id: statusFilter || undefined,
+  });
+
+  const updateReturnStatus = useUpdateReturnStatus();
+  const deleteReturn = useDeleteReturn();
+
+  const handleEdit = (returnItem: Return) => {
+    setSelectedReturn(returnItem);
+    setModalOpen(true);
+  };
+
+  const handleDelete = (returnItem: Return) => {
+    setSelectedReturn(returnItem);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleViewDetails = (returnItem: Return) => {
+    setSelectedReturn(returnItem);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedReturn) {
+      deleteReturn.mutate(selectedReturn._id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setSelectedReturn(null);
+        },
+      });
+    }
+  };
+
+  const handleSubmit = (data: ReturnUpdate & { return_status_id: string }) => {
+    if (selectedReturn) {
+      updateReturnStatus.mutate(
+        { id: selectedReturn._id, data },
+        {
+          onSuccess: () => {
+            setModalOpen(false);
+            setSelectedReturn(null);
+          },
+        }
+      );
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4">Returns</Typography>
+      </Box>
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {statuses?.map((status) => (
+                  <MenuItem key={status._id} value={status._id}>
+                    {status.status}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+        <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                setStatusFilter('');
+              }}
+            >
+              Clear
+            </Button>
+        </Box>
+      </Paper>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Return ID</TableCell>
+              <TableCell>Order ID</TableCell>
+              <TableCell>Quantity</TableCell>
+              <TableCell>Amount</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Created At</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {returns?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  No returns found
+                </TableCell>
+              </TableRow>
+            ) : (
+              returns?.map((returnItem) => (
+                <TableRow key={returnItem._id}>
+                  <TableCell>{returnItem._id.slice(-8)}</TableCell>
+                  <TableCell>{returnItem.order_id.slice(-8)}</TableCell>
+                  <TableCell>{returnItem.quantity}</TableCell>
+                  <TableCell>₹{returnItem.amount || 0}</TableCell>
+                  <TableCell>
+                    <Chip label={returnItem.return_status} size="small" color="warning" />
+                  </TableCell>
+                  <TableCell>{new Date(returnItem.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      color="info"
+                      onClick={() => handleViewDetails(returnItem)}
+                    >
+                      <Visibility />
+                    </IconButton>
+                    <IconButton size="small" color="primary" onClick={() => handleEdit(returnItem)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDelete(returnItem)}>
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <ReturnFormModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedReturn(null);
+        }}
+        onSubmit={handleSubmit}
+        returnItem={selectedReturn}
+        isLoading={updateReturnStatus.isPending}
+      />
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this return? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" disabled={deleteReturn.isPending}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Return Details</DialogTitle>
+        <DialogContent>
+          {selectedReturn && (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Return ID: {selectedReturn._id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Order ID: {selectedReturn.order_id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Product ID: {selectedReturn.product_id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Quantity: {selectedReturn.quantity}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Amount: ₹{selectedReturn.amount || 0}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Status: {selectedReturn.return_status}
+              </Typography>
+              {selectedReturn.reason && (
+                <Typography variant="body2" gutterBottom>
+                  Reason: {selectedReturn.reason}
+                </Typography>
+              )}
+              {selectedReturn.image_url && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Image:
+                  </Typography>
+                  <img
+                    src={selectedReturn.image_url}
+                    alt="Return"
+                    style={{ maxWidth: '100%', maxHeight: 300 }}
+                  />
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};

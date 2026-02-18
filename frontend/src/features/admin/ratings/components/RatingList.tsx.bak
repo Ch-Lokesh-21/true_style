@@ -1,0 +1,169 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Typography,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Rating as MuiRating,
+} from '@mui/material';
+import { Delete, Visibility } from '@mui/icons-material';
+import { useRatings, useDeleteRating } from '../hooks/useRatings';
+import type { Rating } from '../types';
+
+export const RatingList: React.FC = () => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedRating, setSelectedRating] = useState<Rating | null>(null);
+
+  const { data: ratings, isLoading } = useRatings();
+  const deleteRating = useDeleteRating();
+
+  const handleDelete = (rating: Rating) => {
+    setSelectedRating(rating);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleViewDetails = (rating: Rating) => {
+    setSelectedRating(rating);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedRating) {
+      deleteRating.mutate(selectedRating._id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setSelectedRating(null);
+        },
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4">Ratings</Typography>
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Rating ID</TableCell>
+              <TableCell>Product ID</TableCell>
+              <TableCell>User ID</TableCell>
+              <TableCell>Rating</TableCell>
+              <TableCell>Created At</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {ratings?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  No ratings found
+                </TableCell>
+              </TableRow>
+            ) : (
+              ratings?.map((rating) => (
+                <TableRow key={rating._id}>
+                  <TableCell>{rating._id.slice(-8)}</TableCell>
+                  <TableCell>{rating.product_id.slice(-8)}</TableCell>
+                  <TableCell>{rating.user_id.slice(-8)}</TableCell>
+                  <TableCell>
+                    <MuiRating value={rating.rating} readOnly />
+                  </TableCell>
+                  <TableCell>{new Date(rating.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      color="info"
+                      onClick={() => handleViewDetails(rating)}
+                    >
+                      <Visibility />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDelete(rating)}>
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this rating? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" disabled={deleteRating.isPending}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Rating Details</DialogTitle>
+        <DialogContent>
+          {selectedRating && (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Rating ID: {selectedRating._id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Product ID: {selectedRating.product_id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                User ID: {selectedRating.user_id}
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Rating:
+                </Typography>
+                <MuiRating value={selectedRating.rating} readOnly />
+              </Box>
+              <Typography variant="body2" sx={{ mt: 2 }}>
+                Created: {new Date(selectedRating.createdAt).toLocaleString()}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};

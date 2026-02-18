@@ -1,0 +1,281 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Typography,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
+import { Edit, Delete, Visibility } from '@mui/icons-material';
+import {
+  useReviews,
+  useUpdateReviewStatus,
+  useDeleteReview,
+  useReviewStatuses,
+} from '../hooks/useReviews';
+import { ReviewFormModal } from './ReviewFormModal';
+import type { Review, ReviewUpdate } from '../types';
+
+export const ReviewList: React.FC = () => {
+  const [statusFilter, setStatusFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+
+  const { data: statuses } = useReviewStatuses();
+  const { data: reviews, isLoading } = useReviews({
+    review_status_id: statusFilter || undefined,
+  });
+
+  const updateReviewStatus = useUpdateReviewStatus();
+  const deleteReview = useDeleteReview();
+
+  const handleEdit = (review: Review) => {
+    setSelectedReview(review);
+    setModalOpen(true);
+  };
+
+  const handleDelete = (review: Review) => {
+    setSelectedReview(review);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleViewDetails = (review: Review) => {
+    setSelectedReview(review);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedReview) {
+      deleteReview.mutate(selectedReview._id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setSelectedReview(null);
+        },
+      });
+    }
+  };
+
+  const handleSubmit = (data: ReviewUpdate & { review_status_id: string }) => {
+    if (selectedReview) {
+      updateReviewStatus.mutate(
+        { id: selectedReview._id, data },
+        {
+          onSuccess: () => {
+            setModalOpen(false);
+            setSelectedReview(null);
+          },
+        }
+      );
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4">Reviews</Typography>
+      </Box>
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All</MenuItem>
+                {statuses?.map((status) => (
+                  <MenuItem key={status._id} value={status._id}>
+                    {status.status}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+        <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                setStatusFilter('');
+              }}
+            >
+              Clear
+            </Button>
+        </Box>
+      </Paper>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Review ID</TableCell>
+              <TableCell>Product ID</TableCell>
+              <TableCell>User ID</TableCell>
+              <TableCell>Review</TableCell>
+              <TableCell>Image</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Created At</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {reviews?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  No reviews found
+                </TableCell>
+              </TableRow>
+            ) : (
+              reviews?.map((review) => (
+                <TableRow key={review._id}>
+                  <TableCell>{review._id.slice(-8)}</TableCell>
+                  <TableCell>{review.product_id.slice(-8)}</TableCell>
+                  <TableCell>{review.user_id.slice(-8)}</TableCell>
+                  <TableCell>
+                    {review.review
+                      ? review.review.length > 50
+                        ? `${review.review.substring(0, 50)}...`
+                        : review.review
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {review.image_url ? (
+                      <img
+                        src={review.image_url}
+                        alt="Review"
+                        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+                      />
+                    ) : (
+                      'N/A'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={review.review_status_id} size="small" color="primary" />
+                  </TableCell>
+                  <TableCell>{new Date(review.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      color="info"
+                      onClick={() => handleViewDetails(review)}
+                    >
+                      <Visibility />
+                    </IconButton>
+                    <IconButton size="small" color="primary" onClick={() => handleEdit(review)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => handleDelete(review)}>
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <ReviewFormModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedReview(null);
+        }}
+        onSubmit={handleSubmit}
+        review={selectedReview}
+        isLoading={updateReviewStatus.isPending}
+      />
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this review? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" disabled={deleteReview.isPending}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Review Details</DialogTitle>
+        <DialogContent>
+          {selectedReview && (
+            <Box sx={{ pt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Review ID: {selectedReview._id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                Product ID: {selectedReview.product_id}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                User ID: {selectedReview.user_id}
+              </Typography>
+              {selectedReview.review && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Review:
+                  </Typography>
+                  <Typography variant="body2" sx={{ pl: 2 }}>
+                    {selectedReview.review}
+                  </Typography>
+                </Box>
+              )}
+              {selectedReview.image_url && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Image:
+                  </Typography>
+                  <img
+                    src={selectedReview.image_url}
+                    alt="Review"
+                    style={{ maxWidth: '100%', maxHeight: 300 }}
+                  />
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};

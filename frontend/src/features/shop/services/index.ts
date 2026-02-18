@@ -1,0 +1,10 @@
+export { productService } from '../products/services/productService';
+export { cartService } from '../cart/services/cartService';
+export { wishlistService } from '../wishlist/services/wishlistService';
+export { orderService } from '../orders/services/orderService';
+export { addressService } from '../addresses/services/addressService';
+export { returnService } from '../returns/services/returnService';
+export { exchangeService } from '../exchanges/services/exchangeService';
+export { ratingService } from '../ratings-reviews/services/ratingService';
+export { reviewService } from '../ratings-reviews/services/reviewService';
+export { lookupService } from '../shared/services/lookupService';

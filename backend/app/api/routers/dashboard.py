@@ -35,7 +35,7 @@ from app.schemas.dashboard import (
 )
 from app.services import dashboard as svc
 
-router = APIRouter()  # mounted under /dashboard in main.py
+router = APIRouter()  
 
 
 @router.get(

@@ -57,17 +57,11 @@ async def get_overview() -> Dict[str, Any]:
     returns = await db["returns"].count_documents({})
     exchanges = await db["exchanges"].count_documents({})
 
-    # Find payment_status IDs marked as "success"
-    paid_status_ids = []
-    async for s in db["payment_status"].find({"status": {"$in": ["success"]}}, {"_id": 1}):
-        paid_status_ids.append(s["_id"])
-
-    match_stage = {"payment_status_id": {"$in": paid_status_ids}} if paid_status_ids else {}
+    # Calculate total revenue from all confirmed orders
     pipeline = [
-        {"$match": match_stage} if match_stage else {"$match": {"amount": {"$ne": None}}},
-        {"$group": {"_id": None, "sum": {"$sum": {"$ifNull": ["$amount", 0]}}}},
+        {"$group": {"_id": None, "sum": {"$sum": {"$ifNull": ["$total", 0]}}}},
     ]
-    agg = await db["payments"].aggregate(pipeline).to_list(1)
+    agg = await db["orders"].aggregate(pipeline).to_list(1)
     revenue = float(agg[0]["sum"]) if agg else 0.0
 
     return {
@@ -89,7 +83,7 @@ async def sales_series(days: int) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: A list of daily {date, value} pairs where
-        `value` is total payment amount on that date.
+        `value` is total order revenue on that date.
     """
     start_utc = _date_floor_utc(days)
     pipeline = [
@@ -102,11 +96,11 @@ async def sales_series(days: int) -> List[Dict[str, Any]]:
                     "timezone": TZ
                 }
             },
-            "value": {"$sum": {"$ifNull": ["$amount", 0]}},
+            "value": {"$sum": {"$ifNull": ["$total", 0]}},
         }},
         {"$sort": {"_id": 1}},
     ]
-    rows = await db["payments"].aggregate(pipeline).to_list(None)
+    rows = await db["orders"].aggregate(pipeline).to_list(None)
     return [{"date": r["_id"].date().isoformat(), "value": float(r["value"])} for r in rows]
 
 
@@ -180,7 +174,7 @@ async def top_products(limit: int) -> List[Dict[str, Any]]:
         {"$sort": {"total_quantity": -1, "total_revenue": -1}},
         {"$limit": limit},
     ]
-    rows = await db["order_item"].aggregate(pipeline).to_list(None)
+    rows = await db["order_items"].aggregate(pipeline).to_list(None)
     for r in rows:
         r["total_revenue"] = float(r.get("total_revenue", 0.0))
         r["total_quantity"] = int(r.get("total_quantity", 0))
@@ -336,19 +330,12 @@ async def get_admin_overview() -> Dict[str, Any]:
             "exchange_status_id": {"$in": pending_exchange_statuses}
         })
 
-    # Total earnings from successful payments
-    paid_status_ids = []
-    async for s in db["payment_status"].find({"status": {"$in": ["success"]}}, {"_id": 1}):
-        paid_status_ids.append(s["_id"])
-
-    total_earnings = 0.0
-    if paid_status_ids:
-        pipeline = [
-            {"$match": {"payment_status_id": {"$in": paid_status_ids}}},
-            {"$group": {"_id": None, "sum": {"$sum": {"$ifNull": ["$amount", 0]}}}},
-        ]
-        agg = await db["payments"].aggregate(pipeline).to_list(1)
-        total_earnings = float(agg[0]["sum"]) if agg else 0.0
+    # Total earnings from all orders
+    pipeline = [
+        {"$group": {"_id": None, "sum": {"$sum": {"$ifNull": ["$total", 0]}}}},
+    ]
+    agg = await db["orders"].aggregate(pipeline).to_list(1)
+    total_earnings = float(agg[0]["sum"]) if agg else 0.0
 
     return {
         "total_earnings": total_earnings,

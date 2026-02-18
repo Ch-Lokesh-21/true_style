@@ -79,10 +79,14 @@ const ActionDialog: React.FC<{
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {type === 'return' ? 'Return Item' : 'Exchange Item'}
-        <Typography variant="body2" color="text.secondary">
-          {item?.product_name}
-        </Typography>
+        <Box>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            {type === 'return' ? 'Return Item' : 'Exchange Item'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {item?.product_name}
+          </Typography>
+        </Box>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -519,9 +523,12 @@ export const OrderDetailPage: React.FC = () => {
         {/* Return/Exchange Info */}
         {showReturnExchange && (
           <Paper elevation={0} sx={{ p: 3, mt: 3, borderRadius: 0, bgcolor: '#fff9e6' }}>
-            <Typography variant="body2">
-              <strong>Easy Returns & Exchanges:</strong> You can return or exchange delivered items within 7 days of delivery.
-            </Typography>
+            <Box component="div" sx={{ display: 'block' }}>
+              <strong>Easy Returns & Exchanges:</strong>{' '}
+              <Typography variant="body2" component="span">
+                You can return or exchange delivered items within 7 days of delivery.
+              </Typography>
+            </Box>
           </Paper>
         )}
       </Container>

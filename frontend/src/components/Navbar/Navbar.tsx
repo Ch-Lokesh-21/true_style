@@ -65,7 +65,7 @@ export const Navbar = () => {
           }}
         >
           <Link
-            to={ROUTES.HOME}
+            to={ROUTES.SHOP}
             style={{ textDecoration: "none", color: "inherit" }}
           >
             <Box
@@ -212,16 +212,6 @@ export const Navbar = () => {
                   }}
                 >
                   My Exchanges
-                </MenuItem>
-                <MenuItem
-                  onClick={() => handleMenuItemClick(ROUTES.USER.AI_SEARCH)}
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "rgba(0,0,0,0.08)",
-                    },
-                  }}
-                >
-                  AI Search
                 </MenuItem>
                 <MenuItem
                   onClick={handleLogout}

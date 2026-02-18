@@ -162,15 +162,6 @@ async def get_my_order(order_id: PyObjectId, current_user: Dict = Depends(get_cu
     return await get_my_order_service(order_id=order_id, current_user=current_user)
 
 
-@router.get(
-    "/{order_id}",
-    response_model=OrdersOut,
-    dependencies=[Depends(require_permission("orders", "Read", "admin"))],
-)
-async def admin_get_order(order_id: PyObjectId):
-    """Admin: get any order by id."""
-    return await admin_get_order_service(order_id)
-
 @router.get("/admin", response_model=List[OrdersOut], dependencies=[Depends(require_permission("orders","Read"))])
 async def admin_list_orders(
     skip: int = 0,
@@ -194,6 +185,15 @@ async def admin_list_orders(
         min_total=min_total, max_total=max_total,
         q=q, sort=sort,
     )
+
+@router.get(
+    "/{order_id}",
+    response_model=OrdersOut,
+    dependencies=[Depends(require_permission("orders", "Read", "admin"))],
+)
+async def admin_get_order(order_id: PyObjectId):
+    """Admin: get any order by id."""
+    return await admin_get_order_service(order_id)
 
 
 @router.put(
